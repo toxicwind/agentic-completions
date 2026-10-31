@@ -67,7 +67,14 @@ def chat(messages, model=DEFAULT_MODEL, max_tokens=MAX_TOKENS, temperature=0.2,
         except urllib.error.HTTPError as e:
             last = e
             if e.code == 429:
-                time.sleep(2 * (attempt + 1))  # observer effect: serialize, back off
+                retry_after = e.headers.get("retry-after") if hasattr(e, "headers") else None
+                delay = 2 * (attempt + 1)
+                try:
+                    if retry_after:
+                        delay = min(int(float(retry_after)), 15)
+                except Exception:
+                    pass
+                time.sleep(delay)
                 continue
             if e.code >= 500:
                 time.sleep(1.5)
