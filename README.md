@@ -32,6 +32,10 @@ import { runLoop } from "./ts/src/loop.ts";
 const { text, usage } = await chat([{ role: "user", content: "..." }]);        // UA-wall, 429 retry
 const { data } = await structured<MyShape>(msgs);                              // strict JSON + repair round
 const res = await satisfy([{ name: "tests green", run: () => [ok, ev] }], "p"); // code-first gate
+import { embed, cosine } from "./ts/src/completions.ts";
+const [a, b] = await embed(["goal text", "file body"]);   // bge-m3, 1024 dims, free
+cosine(a, b);                                              // semantic file matching
+
 const r = await auto("server:tool", args, { validate: Boolean });              // gateway -> qwen fallback
 const o = await runLoop({ goal, workdir }, { provider });                      // agentic loop; finish gated on exec
 ```
@@ -61,3 +65,9 @@ cd ts && bun install && bun test   # 8 tests green
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize",...}' | \
   FREEINFERENCE_API_KEY=... bun run ts/bin/cli.ts   # stdio MCP
 ```
+
+## Lanes (verified live 2026-10-31)
+- **chat/vision**: qwen3.6-35b (image input despite model card), glm-5.3-flash (1M ctx, thinking, recommended), deepseek-v4-flash
+- **embeddings**: bge-m3 — 1024 dims FIXED (`dimensions` param -> 530), `base64` encoding_format works, free, 8192 ctx
+- **docs-vs-live**: minimax-m3 documented Free but 404 on free keys (access-filtered catalog); `X-Reasoning-Passthrough:false` strips reasoning_content but starves qwen content (use passthrough default)
+- **Anthropic-compat**: /v1/messages + anthropic-beta header; **batches** for internal accounts; **/v1/qdrant/** proxy with api-key header

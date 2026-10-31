@@ -217,3 +217,41 @@ export const satisfy = async (
     judgment: verdict,
   };
 };
+
+export interface EmbedOpts {
+  model?: string; // bge-m3: 1024 dims fixed (dimensions param -> 530), free, 8192 ctx
+  keyOverride?: string;
+  fetchImpl?: typeof fetch;
+}
+
+// bge-m3 embeddings: /v1/embeddings, OpenAI-compatible. float (default) ->
+// 1024-dim arrays; base64 encoding_format also works (5464-char blob).
+export const embed = async (
+  texts: readonly string[],
+  opts: EmbedOpts = {},
+): Promise<number[][]> => {
+  const key = opts.keyOverride ?? (await getKey());
+  const doFetch = opts.fetchImpl ?? fetch;
+  const res = await doFetch(`${BASE}/embeddings`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "user-agent": UA },
+    body: JSON.stringify({ model: opts.model ?? "bge-m3", input: [...texts] }),
+  });
+  if (!res.ok) throw new Error(`embed http ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  const data = (await res.json()) as {
+    data: Array<{ embedding: number[]; index: number }>;
+  };
+  return [...data.data].sort((a, b) => a.index - b.index).map((d) => d.embedding);
+};
+
+export const cosine = (a: readonly number[], b: readonly number[]): number => {
+  let dot = 0;
+  let na = 0;
+  let nb = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    dot += a[i] * b[i];
+    na += a[i] * a[i];
+    nb += b[i] * b[i];
+  }
+  return na && nb ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
+};
