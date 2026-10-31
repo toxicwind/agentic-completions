@@ -113,6 +113,28 @@ const dispatchTool = async (
       return { output: `write error: ${String(e)}` };
     }
   }
+  if (call.name === "apply_patch") {
+    const diff = String(call.args.diff ?? "");
+    if (!diff.trim()) return { output: "error: empty diff" };
+    const diffPath = path.join(cfg.workdir, `.agentic-${Date.now()}.patch`);
+    try {
+      await wr(diffPath, diff);
+      const r = await runExec(
+        cfg.workdir,
+        `patchling-apply --project-dir ${JSON.stringify(cfg.workdir)} --dumb ${JSON.stringify(diffPath)} && rm -f ${JSON.stringify(diffPath)}`,
+        30_000,
+      );
+      if (r.ok) {
+        state.execRuns += 1;
+        return {
+          output: `exit=${r.value.code}\nstdout:\n${r.value.stdout}\nstderr:\n${r.value.stderr}`,
+        };
+      }
+      return { output: `patch exec error: ${r.error}` };
+    } catch (e) {
+      return { output: `patch error: ${String(e)}` };
+    }
+  }
   if (call.name === "finish") {
     const verified = call.args.verified === true;
     const report = String(call.args.report ?? "");

@@ -135,3 +135,20 @@ describe("provider contract (from peer doctrine)", () => {
     expect(calls).toBe(1);
   });
 });
+
+describe("apply_patch tool", () => {
+  test("applies a unified diff via patchling-apply and counts as exec", async () => {
+    const tmp = await Bun.$`mktemp -d`.text().then((s) => s.trim());
+    await Bun.write(`${tmp}/f.py`, "def old():\n    pass\n");
+    const diff = `--- a/f.py\n+++ b/f.py\n@@ -1,2 +1,2 @@\n def old():\n-    pass\n+    return 42\n`;
+    const provider = fakeProvider([
+      reply(null, [{ id: "1", name: "apply_patch", args: { diff } }]),
+      reply(null, [{ id: "2", name: "finish", args: { report: "ok", verified: true } }]),
+    ]);
+    const outcome = await runLoop({ goal: "g", workdir: tmp }, { provider });
+    expect(outcome.ok).toBe(true);
+    expect(outcome.ok && outcome.value.satisfied).toBe(true);
+    expect(outcome.ok && outcome.value.execRuns).toBe(1);
+    expect(await Bun.file(`${tmp}/f.py`).text()).toContain("return 42");
+  });
+});

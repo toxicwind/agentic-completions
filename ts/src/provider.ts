@@ -152,6 +152,19 @@ export const AGENTIC_TOOLS = [
   {
     type: "function",
     function: {
+      name: "apply_patch",
+      description:
+        "Apply a unified diff to the workdir via patchling-apply --dumb (offline, deterministic, no LLM). Preferred over write_file for multi-file edits.",
+      parameters: {
+        type: "object",
+        properties: { diff: { type: "string", description: "unified diff text" } },
+        required: ["diff"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "finish",
       description:
         "Finish with a report. REJECTED unless at least one successful exec_code run happened first (code run before satisfied).",

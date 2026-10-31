@@ -1,0 +1,11 @@
+{
+  "name": "@toxicwind/agentic-completions",
+  "version": "1.1.0",
+  "type": "module",
+  "bin": { "agentic-completions": "./ts/bin/cli.ts" },
+  "scripts": {
+    "test": "bun test ts/",
+    "typecheck": "bun x tsc --noEmit -p ts",
+    "start": "bun run ts/bin/cli.ts"
+  }
+}
