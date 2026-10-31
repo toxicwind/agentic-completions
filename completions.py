@@ -10,6 +10,7 @@ Doctrine (2026-10-31):
 
 import base64
 import json
+import math
 import os
 import re
 import subprocess
@@ -106,7 +107,8 @@ def satisfy(checks, judgment_prompt, model=DEFAULT_MODEL):
     Returns {"satisfied": bool, "code_checks": [...], "judgment": str|None}.
     """
     results = []
-    for name, fn in checks:
+    for c in checks:
+        name, fn = c[0], c[1]
         ok, evidence = fn()
         results.append({"check": name, "ok": bool(ok), "evidence": str(evidence)[:300]})
         if not ok:
@@ -130,3 +132,28 @@ def satisfy(checks, judgment_prompt, model=DEFAULT_MODEL):
             "advisory": "model flagged concerns" if concerns
                         else "model verdict malformed" if advisory else None,
             "judgment": verdict}
+
+
+def embed(texts, model="bge-m3", api_key=None):
+    """Embedding lane (bge-m3: 1024 dims, 8192 ctx, free). texts: list[str]."""
+    key = api_key or os.environ.get("FREEINFERENCE_API_KEY") or get_key()
+    body = json.dumps({"model": model, "input": list(texts)}).encode()
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(BASE.rstrip("/") + "/embeddings", data=body,
+                headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json",
+                         "User-Agent": UA})
+            r = json.load(urllib.request.urlopen(req, timeout=60))
+            return [d["embedding"] for d in sorted(r["data"], key=lambda x: x["index"])]
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and attempt < 2:
+                time.sleep(2 * (attempt + 1))
+                continue
+            raise
+
+
+def cosine(a, b):
+    dot = sum(x * y for x, y in zip(a, b))
+    na = math.sqrt(sum(x * x for x in a))
+    nb = math.sqrt(sum(y * y for y in b))
+    return dot / (na * nb) if na and nb else 0.0
