@@ -30,3 +30,23 @@ r = auto("server:tool", {...}, validate=lambda d: bool(d))
 ```
 
 Keys: `FREEINFERENCE_API_KEY` env or secretsmith keyring (`--show`).
+
+## TS lane (`ts/`) — tool-calling agentic loop + MCP stdio server
+
+Bun/TS implementation of the same doctrine as a server-side agentic loop:
+
+- `ts/src/loop.ts` — model drives `exec_code` / `read_file` / `write_file`;
+  the `finish(verified=true)` tool is **REJECTED** until ≥1 successful
+  `exec_code` run (code-run-first enforced at the tool boundary, not just
+  before consult). Path traversal blocked; workdir-sandboxed.
+- `ts/src/provider.ts` — freeinference/Qwen client: browser UA (anomaly #14),
+  429/5xx retry+backoff honoring `retry-after` (max 3 attempts),
+  `max_tokens ≥ 2500` floor (anomaly #1), monadic `Result` returns.
+- `ts/bin/cli.ts` — MCP stdio server exposing `agentic_complete(goal, workdir)`
+  (env: `FREEINFERENCE_API_KEY`, `AGENTIC_MODEL`, `AGENTIC_MAX_STEPS`).
+
+```bash
+cd ts && bun install && bun test   # 8 tests green
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize",...}' | \
+  FREEINFERENCE_API_KEY=... bun run ts/bin/cli.ts   # stdio MCP
+```

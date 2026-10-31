@@ -1,0 +1,19 @@
+{
+  "name": "@toxicwind/agentic-completions",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "agentic-completions": "./bin/cli.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "start": "bun run bin/cli.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.4"
+  }
+}
