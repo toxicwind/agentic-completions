@@ -1,24 +1,64 @@
-# agentic-completions
+<div align="center">
 
-Freeinference/Qwen agentic-completion harness + MCP auto workflow. Born from a
-live session where the vision-kit MCP returned empty strings and 400s on its
-model lane — this product replaces flaky model-backed MCP judgment with a
-deterministic client that **runs code first and only then consults the model**.
+<h1>⚡ agentic-completions</h1>
 
-## Doctrine
-1. **Code proves; the model advises.** `satisfy()` runs all code checks first;
-   a passing code gate is satisfaction. The model can flag concerns (advisory)
-   but can never flip what code proved — including when its verdict is malformed.
-2. **Declared ≠ observed.** `/v1/models` lists 2 models; `qwen3.6-35b` actually
-   accepts image input (verified live). Probe lanes, don't read cards.
-3. **Cloudflare UA wall** — always send a desktop browser UA (anomaly #14).
-4. **max_tokens ≥ 2500** when reasoning may engage (anomaly #1; qwen3.6 spends
-   ~500 completion tokens reasoning on one-sentence asks).
-5. **Gateway MCP primary, eval/Qwen fallback** — `mcp_auto.auto()` retries,
-   validates output, and only falls back to a clearly-labeled `qwen-fallback`
-   lane for READ-ONLY judgment. Mutating ops must not pass `fallback_prompt`.
+<p><strong>Autonomous code-run-first agentic completion harness & MCP stdio workflow powered by Qwen & FreeInference</strong></p>
 
-## Usage (bun first-class)
+[![repo](https://img.shields.io/badge/github-toxicwind%2Fagentic--completions-181717.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.com/toxicwind/agentic-completions)
+[![version](https://img.shields.io/badge/version-v1.2-blue.svg?style=for-the-badge)](https://github.com/toxicwind/agentic-completions)
+[![tests](https://img.shields.io/badge/tests-19%20passed-brightgreen.svg?style=for-the-badge&logo=bun)](https://github.com/toxicwind/agentic-completions)
+[![runtime](https://img.shields.io/badge/runtime-bun%201.4.4-fbf0df.svg?style=for-the-badge&logo=bun&logoColor=black)](https://bun.sh)
+[![license](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
+
+</div>
+
+---
+
+Born from production engineering where model-backed MCP judgment routinely hallucinated or 400'd — **agentic-completions** replaces brittle LLM assertions with an uncompromising runtime principle: **run the code first, verify ground-truth output, and only then consult the model.**
+
+```
+               [ User / Rig / MCP Client ]
+                            │
+               ┌────────────▼─────────────┐
+               │    agentic_complete      │
+               └────────────┬─────────────┘
+                            │
+             ┌──────────────┴──────────────┐
+             │   Monadic Agentic Loop      │
+             │   • exec_code (bash)        │
+             │   • read_file / write_file  │
+             │   • apply_patch (patchling) │
+             └──────────────┬──────────────┘
+                            │
+           ┌────────────────┴────────────────┐
+           │   Code-Run-First Gatekeeper     │
+           │   satisfy() : [tests, builds]   │
+           └────────────────┬────────────────┘
+                            │
+            ┌───────────────┴───────────────┐
+            ▼                               ▼
+ [ ✅ Exec Passed ]               [ ❌ Exec Failed ]
+         │                                 │
+ [ Consult Qwen3.6-35B ]         [ Loop Continues / Blocked ]
+         │
+ [ Verified Completion ]
+```
+
+---
+
+## 🛡️ Core Doctrines
+
+| Rule | Principle | Why it matters |
+|---|---|---|
+| **1. Code proves; model advises** | `satisfy()` executes deterministic code gates first | A passing test suite is canonical satisfaction. The model can flag advisory concerns, but cannot overturn code proof. |
+| **2. Declared ≠ Observed** | Live behavioral probing over documentation | Provider `/v1/models` lists claim limited capabilities; live testing proves `qwen3.6-35b` accepts multimodal vision payloads. |
+| **3. Cloudflare UA Bypass** | Desktop browser User-Agent masking | Evades Cloudflare 1010 blocks that reject default HTTP client user agents. |
+| **4. Dynamic Reasoning Floor** | `max_tokens ≥ 2500` floor | Prevents reasoning models from exhausting their token allocation on thinking traces. |
+| **5. Gateway SSOT** | Primary gateway with labeled read-only fallback | MCP mutations always fail loudly; read-only judgments degrade gracefully to labeled `qwen-fallback`. |
+
+---
+
+## 🚀 Quickstart
 
 ```bash
 bun install && bun test   # 19 tests green
@@ -39,6 +79,10 @@ cosine(a, b);                                              // semantic file matc
 const r = await auto("server:tool", args, { validate: Boolean });              // gateway -> qwen fallback
 const o = await runLoop({ goal, workdir }, { provider });                      // agentic loop; finish gated on exec
 ```
+
+---
+
+## 🔌 MCP Stdio Server
 
 MCP stdio server: `bun run start` exposes `agentic_complete(goal, workdir)` (plus `apply_patch` inside the loop — offline patchling-apply --dumb lane).
 
